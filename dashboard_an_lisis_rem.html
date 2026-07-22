@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Análisis Excel</title>
+    <!-- Tailwind CSS para los estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS para leer archivos Excel localmente y exportar -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Chart.js para visualización de datos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans p-4 md:p-8 min-h-screen">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Encabezado y Carga de Archivo -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Dashboard de Control y Análisis REM</h1>
+                <p class="text-sm text-slate-500 mt-1">Sube tu archivo Excel para analizar duplicados, registros REM, Instrumento, Funcionario y exportar hojas separadas por profesional.</p>
+            </div>
+            <div class="flex items-center gap-3 flex-wrap">
+                <button onclick="exportFilteredData()" id="btnExport" class="hidden items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-5 rounded-xl cursor-pointer transition-colors shadow-sm text-sm">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Descargar archivo procesado
+                </button>
+                <div class="relative">
+                    <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" class="hidden" onchange="processExcel(event)">
+                    <label for="excelFile" class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-6 rounded-xl cursor-pointer transition-colors shadow-sm ring-1 ring-inset ring-indigo-700 text-sm">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        Cargar Archivo Excel
+                    </label>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tarjetas de Métricas (KPIs) -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-indigo-500 transition-all hover:shadow-md">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Filas Leídas</p>
+                <h2 id="metricTotalRows" class="text-3xl font-extrabold text-slate-800">0</h2>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500 transition-all hover:shadow-md">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Valores Únicos (Col A)</p>
+                <h2 id="metricUnique" class="text-3xl font-extrabold text-emerald-600">0</h2>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-rose-500 transition-all hover:shadow-md">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Duplicados (Col A)</p>
+                <h2 id="metricDuplicates" class="text-3xl font-extrabold text-rose-600">0</h2>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-amber-500 transition-all hover:shadow-md">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Duplicados (100% Sin REM)</p>
+                <h2 id="metricREM" class="text-3xl font-extrabold text-amber-500">0</h2>
+            </div>
+        </section>
+
+        <!-- Contenedor Principal: Filtros y Gráfico -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Panel de Control / Filtros -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <h3 class="text-lg font-semibold text-slate-800 border-b border-slate-100 pb-3">Filtros de Análisis</h3>
+                
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Estado en Columna A:</label>
+                        <select id="filterDuplicate" onchange="onFilterChange()" class="w-full border-slate-200 rounded-xl p-2 bg-slate-50 border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow text-xs">
+                            <option value="ALL">Todos los registros</option>
+                            <option value="DUPLICATED">Solo Duplicados (Col A)</option>
+                            <option value="DUPLICATED_STRICT_REM">Todas sus repeticiones sin registro REM</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Filtro REM (Columna AM):</label>
+                        <select id="filterREM" onchange="onFilterChange()" class="w-full border-slate-200 rounded-xl p-2 bg-slate-50 border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow text-xs">
+                            <option value="ALL">Mostrar Todos</option>
+                            <option value="REM_ONLY">Actividad no contabilizada en REM</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Instrumento:</label>
+                        <select id="filterInstrument" onchange="onInstrumentChange()" class="w-full border-slate-200 rounded-xl p-2 bg-slate-50 border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow text-xs">
+                            <option value="ALL">Todos los Instrumentos</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Funcionario:</label>
+                        <select id="filterStaff" onchange="onFilterChange()" class="w-full border-slate-200 rounded-xl p-2 bg-slate-50 border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow text-xs">
+                            <option value="ALL">Todos los Funcionarios</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Búsqueda rápida (ID Col A):</label>
+                        <input type="text" id="filterSearch" oninput="onFilterChange()" placeholder="Ej. 722597710..." class="w-full border-slate-200 rounded-xl p-2 bg-slate-50 border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow text-xs">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualización / Gráfico de Distribución Interactiva -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 lg:col-span-2 flex flex-col">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                    <h3 class="text-lg font-semibold text-slate-800">Distribución de Registros por Selección</h3>
+                    <div class="flex gap-2">
+                        <button onclick="setChartType('doughnut')" id="btnDoughnut" class="px-3 py-1 text-xs rounded-lg bg-indigo-50 text-indigo-600 font-semibold border border-indigo-200 transition">Circular</button>
+                        <button onclick="setChartType('bar')" id="btnBar" class="px-3 py-1 text-xs rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold transition">Barras</button>
+                    </div>
+                </div>
+                <div class="w-full flex-grow relative min-h-[260px] flex items-center justify-center">
+                    <canvas id="chartMetrics"></canvas>
+                    <div id="chartPlaceholder" class="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">
+                        Esperando datos del archivo Excel...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Resultados -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+            <div class="flex justify-between items-end border-b border-slate-100 pb-3">
+                <h3 class="text-lg font-semibold text-slate-800">Vista Previa de Registros</h3>
+                <span id="tableStatus" class="text-xs text-slate-500">Mostrando 0 registros</span>
+            </div>
+            
+            <div class="overflow-x-auto max-h-[400px] rounded-lg border border-slate-100">
+                <table class="w-full text-left text-sm text-slate-600 border-collapse">
+                    <thead class="bg-slate-50 text-slate-700 sticky top-0 z-10 shadow-sm text-xs uppercase">
+                        <tr>
+                            <th class="p-3 border-b border-slate-200">Fila</th>
+                            <th class="p-3 border-b border-slate-200">ID (Col A)</th>
+                            <th class="p-3 border-b border-slate-200">Hora Atend. (Col E)</th>
+                            <th class="p-3 border-b border-slate-200">Estado A</th>
+                            <th class="p-3 border-b border-slate-200">Instrumento</th>
+                            <th class="p-3 border-b border-slate-200">Funcionario</th>
+                            <th class="p-3 border-b border-slate-200">Detalle REM (Col AM)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-100 bg-white text-xs">
+                        <tr>
+                            <td colspan="7" class="text-center py-12 text-slate-400">
+                                <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Por favor, carga un archivo Excel para ver el detalle de los datos.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        let rawData = [];
+        let filteredDataCache = []; 
+        let originalRowsHeader = []; 
+        let myChart = null;
+        let currentChartType = 'doughnut';
+
+        function getColumnIndex(colStr) {
+            let num = 0;
+            for (let i = 0; i < colStr.length; i++) {
+                num = num * 26 + colStr.charCodeAt(i) - 64;
+            }
+            return num - 1;
+        }
+
+        const INDEX_A = getColumnIndex('A');   
+        const INDEX_E = getColumnIndex('E');   
+        const INDEX_P = getColumnIndex('P');   
+        const INDEX_Q = getColumnIndex('Q');   
+        const INDEX_AM = getColumnIndex('AM'); 
+
+        let globalWorkbookRows = [];
+
+        function formatExcelTime(val) {
+            if (val === undefined || val === null || val === '') return '';
+            
+            if (typeof val === 'number') {
+                const totalSeconds = Math.round(val * 86400);
+                const hours = Math.floor(totalSeconds / 3600) % 24;
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+
+            return String(val).trim();
+        }
+
+        function processExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('tableBody').innerHTML = `<tr><td colspan="7" class="text-center py-8 text-indigo-500 font-medium animate-pulse">Procesando archivo... por favor espere.</td></tr>`;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    const jsonSheet = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+                    if(jsonSheet.length <= 1) {
+                        alert("El archivo parece estar vacío o solo tiene encabezados.");
+                        return;
+                    }
+
+                    originalRowsHeader = jsonSheet[0];
+                    globalWorkbookRows = jsonSheet.slice(1);
+
+                    const idStats = {};
+                    globalWorkbookRows.forEach(row => {
+                        const valA = row[INDEX_A] !== undefined ? String(row[INDEX_A]).trim() : '';
+                        const valAM = row[INDEX_AM] !== undefined ? String(row[INDEX_AM]).trim().toLowerCase() : '';
+                        
+                        if (valA !== '') {
+                            if (!idStats[valA]) {
+                                idStats[valA] = { total: 0, notCounted: 0 };
+                            }
+                            idStats[valA].total += 1;
+                            
+                            if (valAM.includes('actividad no contabilizada en rem') || valAM.includes('actividad no contabilizada en ram')) {
+                                idStats[valA].notCounted += 1;
+                            }
+                        }
+                    });
+
+                    rawData = globalWorkbookRows.map((row, index) => {
+                        const valA = row[INDEX_A] !== undefined ? String(row[INDEX_A]).trim() : '';
+                        const valE = row[INDEX_E];
+                        const valP = row[INDEX_P] !== undefined ? String(row[INDEX_P]).trim() : '';
+                        const valQ = row[INDEX_Q] !== undefined ? String(row[INDEX_Q]).trim() : '';
+                        const valAM = row[INDEX_AM] !== undefined ? String(row[INDEX_AM]).trim() : '';
+                        
+                        const formattedTime = formatExcelTime(valE);
+                        const instrumentVal = valQ !== '' ? valQ : 'No especificado';
+                        const staffVal = valP !== '' ? valP : 'No especificado';
+
+                        let isDuplicate = false;
+                        let isStrictNotCountedDup = false;
+                        
+                        if (valA !== '' && idStats[valA]) {
+                            isDuplicate = idStats[valA].total > 1;
+                            isStrictNotCountedDup = (idStats[valA].total > 1) && (idStats[valA].total === idStats[valA].notCounted);
+                        }
+
+                        const isREM = valAM.toLowerCase().includes('actividad no contabilizada en rem') || valAM.toLowerCase().includes('actividad no contabilizada en ram');
+
+                        return {
+                            originalRowIndex: index, 
+                            rowNum: index + 2,
+                            valA: valA,
+                            valE: formattedTime,
+                            valAM: valAM,
+                            instrument: instrumentVal,
+                            staff: staffVal,
+                            isDuplicate: isDuplicate,
+                            isREM: isREM,
+                            isStrictNotCountedDup: isStrictNotCountedDup
+                        };
+                    });
+
+                    updateInstrumentDropdown(rawData);
+                    updateStaffDropdown(rawData);
+
+                    document.getElementById('chartPlaceholder').style.display = 'none';
+                    document.getElementById('btnExport').classList.remove('hidden');
+                    document.getElementById('btnExport').classList.add('inline-flex');
+
+                    updateDashboardKPIs();
+                    applyFilters();
+
+                } catch (error) {
+                    console.error(error);
+                    alert("Hubo un error al procesar el archivo. Asegúrate de que es un Excel válido.");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function updateInstrumentDropdown(dataPool) {
+            const instruments = new Set();
+            dataPool.forEach(d => { if(d.instrument) instruments.add(d.instrument); });
+
+            const instSelect = document.getElementById('filterInstrument');
+            const currentVal = instSelect.value;
+
+            instSelect.innerHTML = '<option value="ALL">Todos los Instrumentos</option>';
+            Array.from(instruments).sort().forEach(inst => {
+                instSelect.innerHTML += `<option value="${escapeHtml(inst)}">${escapeHtml(inst)}</option>`;
+            });
+
+            if(currentVal && Array.from(instruments).includes(currentVal)) {
+                instSelect.value = currentVal;
+            }
+        }
+
+        function updateStaffDropdown(dataPool) {
+            const staffSet = new Set();
+            dataPool.forEach(d => { if(d.staff) staffSet.add(d.staff); });
+
+            const staffSelect = document.getElementById('filterStaff');
+            const currentStaff = staffSelect.value;
+
+            staffSelect.innerHTML = '<option value="ALL">Todos los Funcionarios</option>';
+            Array.from(staffSet).sort().forEach(st => {
+                staffSelect.innerHTML += `<option value="${escapeHtml(st)}">${escapeHtml(st)}</option>`;
+            });
+
+            if(currentStaff && Array.from(staffSet).includes(currentStaff)) {
+                staffSelect.value = currentStaff;
+            } else {
+                staffSelect.value = 'ALL';
+            }
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function onInstrumentChange() {
+            const filterInst = document.getElementById('filterInstrument').value;
+            
+            const subPool = rawData.filter(item => {
+                const filterDup = document.getElementById('filterDuplicate').value;
+                const filterREM = document.getElementById('filterREM').value;
+                const filterSearch = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+                if (filterDup === 'DUPLICATED' && !item.isDuplicate) return false;
+                if (filterDup === 'DUPLICATED_STRICT_REM' && !item.isStrictNotCountedDup) return false;
+
+                if (filterREM === 'REM_ONLY' && !item.isREM) return false;
+
+                if (filterInst !== 'ALL' && item.instrument !== filterInst) return false;
+
+                if (filterSearch && !item.valA.toLowerCase().includes(filterSearch)) return false;
+
+                return true;
+            });
+
+            updateStaffDropdown(subPool);
+            applyFilters();
+        }
+
+        function onFilterChange() {
+            const filterDup = document.getElementById('filterDuplicate').value;
+            const filterREM = document.getElementById('filterREM').value;
+            
+            const poolForInstruments = rawData.filter(item => {
+                if (filterDup === 'DUPLICATED' && !item.isDuplicate) return false;
+                if (filterDup === 'DUPLICATED_STRICT_REM' && !item.isStrictNotCountedDup) return false;
+                if (filterREM === 'REM_ONLY' && !item.isREM) return false;
+                return true;
+            });
+            updateInstrumentDropdown(poolForInstruments);
+
+            const filterInst = document.getElementById('filterInstrument').value;
+            const poolForStaff = poolForInstruments.filter(item => {
+                if (filterInst !== 'ALL' && item.instrument !== filterInst) return false;
+                return true;
+            });
+            updateStaffDropdown(poolForStaff);
+
+            applyFilters();
+        }
+
+        function updateDashboardKPIs() {
+            const totalRows = rawData.length;
+            const uniqueValSet = new Set();
+            let duplicateRowsCount = 0;
+            let strictDuplicateAndRemCount = 0;
+
+            rawData.forEach(d => {
+                if(d.valA !== '') uniqueValSet.add(d.valA);
+                if(d.isDuplicate) {
+                    duplicateRowsCount++;
+                    if(d.isStrictNotCountedDup) strictDuplicateAndRemCount++;
+                }
+            });
+
+            document.getElementById('metricTotalRows').innerText = totalRows.toLocaleString();
+            document.getElementById('metricUnique').innerText = uniqueValSet.size.toLocaleString();
+            document.getElementById('metricDuplicates').innerText = duplicateRowsCount.toLocaleString();
+            document.getElementById('metricREM').innerText = strictDuplicateAndRemCount.toLocaleString();
+        }
+
+        function applyFilters() {
+            const filterDup = document.getElementById('filterDuplicate').value;
+            const filterREM = document.getElementById('filterREM').value;
+            const filterInst = document.getElementById('filterInstrument').value;
+            const filterStaff = document.getElementById('filterStaff').value;
+            const filterSearch = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+            filteredDataCache = rawData.filter(item => {
+                if (filterDup === 'DUPLICATED' && !item.isDuplicate) return false;
+                if (filterDup === 'DUPLICATED_STRICT_REM' && !item.isStrictNotCountedDup) return false;
+
+                if (filterREM === 'REM_ONLY' && !item.isREM) return false;
+
+                if (filterInst !== 'ALL' && item.instrument !== filterInst) return false;
+                if (filterStaff !== 'ALL' && item.staff !== filterStaff) return false;
+
+                if (filterSearch && !item.valA.toLowerCase().includes(filterSearch)) return false;
+
+                return true;
+            });
+
+            renderTable(filteredDataCache);
+            renderVisualChart(filteredDataCache);
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            const status = document.getElementById('tableStatus');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">No se encontraron registros con los filtros actuales.</td></tr>`;
+                status.innerText = `Mostrando 0 de ${rawData.length} registros`;
+                return;
+            }
+
+            const limit = Math.min(data.length, 100);
+            status.innerText = `Mostrando ${limit} de ${data.length} registros coincidentes`;
+
+            let rowsHTML = '';
+            for(let i = 0; i < limit; i++) {
+                const item = data[i];
+                
+                let badgeClass = 'bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-600/20';
+                let badgeText = 'Único';
+
+                if (item.isDuplicate) {
+                    if (item.isStrictNotCountedDup) {
+                        badgeClass = 'bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-600/20 font-bold';
+                        badgeText = 'Dupl. 100% Sin REM';
+                    } else {
+                        badgeClass = 'bg-rose-100 text-rose-700 ring-1 ring-inset ring-rose-600/20';
+                        badgeText = 'Dupl. (Con Actividad)';
+                    }
+                }
+                
+                const remClass = item.isREM ? 'font-medium text-amber-600' : 'text-slate-600';
+
+                rowsHTML += `
+                    <tr class="hover:bg-indigo-50/50 transition-colors">
+                        <td class="p-3 border-b border-slate-100 text-slate-500">#${item.rowNum}</td>
+                        <td class="p-3 border-b border-slate-100 font-medium text-slate-900">${item.valA || '<span class="text-slate-300 italic">Vacío</span>'}</td>
+                        <td class="p-3 border-b border-slate-100 text-slate-600">${item.valE || '<span class="text-slate-300 italic">-</span>'}</td>
+                        <td class="p-3 border-b border-slate-100">
+                            <span class="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium ${badgeClass}">
+                                ${badgeText}
+                            </span>
+                        </td>
+                        <td class="p-3 border-b border-slate-100 text-slate-700">${escapeHtml(item.instrument)}</td>
+                        <td class="p-3 border-b border-slate-100 text-slate-700">${escapeHtml(item.staff)}</td>
+                        <td class="p-3 border-b border-slate-100 ${remClass} truncate max-w-[200px]" title="${escapeHtml(item.valAM)}">
+                            ${escapeHtml(item.valAM) || '<span class="text-slate-300 italic">Sin datos</span>'}
+                        </td>
+                    </tr>
+                `;
+            }
+            tbody.innerHTML = rowsHTML;
+        }
+
+        function exportFilteredData() {
+            if (!filteredDataCache || filteredDataCache.length === 0) {
+                alert("No hay registros filtrados para exportar.");
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            const generalRows = [originalRowsHeader.map((h, idx) => idx === INDEX_E ? `${h} (Formato Hora)` : h)];
+            filteredDataCache.forEach(item => {
+                const originalRowCopy = [...globalWorkbookRows[item.originalRowIndex]];
+                originalRowCopy[INDEX_E] = item.valE; 
+                generalRows.push(originalRowCopy);
+            });
+            const wsGeneral = XLSX.utils.aoa_to_sheet(generalRows);
+            XLSX.utils.book_append_sheet(wb, wsGeneral, "Consolidado Filtrado");
+
+            const staffGroups = {};
+            filteredDataCache.forEach(item => {
+                const staffName = item.staff || 'Sin Profesional';
+                if (!staffGroups[staffName]) {
+                    staffGroups[staffName] = [];
+                }
+                const originalRowCopy = [...globalWorkbookRows[item.originalRowIndex]];
+                originalRowCopy[INDEX_E] = item.valE;
+                staffGroups[staffName].push(originalRowCopy);
+            });
+
+            Object.entries(staffGroups).forEach(([staffName, rows]) => {
+                const sheetRows = [originalRowsHeader, ...rows];
+                const wsStaff = XLSX.utils.aoa_to_sheet(sheetRows);
+                
+                let cleanSheetName = staffName.replace(/[:\\\/?*\[\]]/g, "").trim();
+                if (cleanSheetName.length > 31) {
+                    cleanSheetName = cleanSheetName.substring(0, 31);
+                }
+                if (!cleanSheetName) cleanSheetName = "Profesional";
+
+                let uniqueSheetName = cleanSheetName;
+                let counter = 1;
+                while (wb.SheetNames.includes(uniqueSheetName)) {
+                    const suffix = `_${counter}`;
+                    uniqueSheetName = cleanSheetName.substring(0, 31 - suffix.length) + suffix;
+                    counter++;
+                }
+
+                XLSX.utils.book_append_sheet(wb, wsStaff, uniqueSheetName);
+            });
+
+            XLSX.writeFile(wb, "Reporte_REM_Por_Profesional.xlsx");
+        }
+
+        function setChartType(type) {
+            currentChartType = type;
+            const btnD = document.getElementById('btnDoughnut');
+            const btnB = document.getElementById('btnBar');
+
+            if(type === 'doughnut') {
+                btnD.className = "px-3 py-1 text-xs rounded-lg bg-indigo-50 text-indigo-600 font-semibold border border-indigo-200 transition";
+                btnB.className = "px-3 py-1 text-xs rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold transition";
+            } else {
+                btnB.className = "px-3 py-1 text-xs rounded-lg bg-indigo-50 text-indigo-600 font-semibold border border-indigo-200 transition";
+                btnD.className = "px-3 py-1 text-xs rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold transition";
+            }
+
+            renderVisualChart(filteredDataCache);
+        }
+
+        function renderVisualChart(currentFilteredData) {
+            const ctx = document.getElementById('chartMetrics').getContext('2d');
+            
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            const filterInst = document.getElementById('filterInstrument').value;
+            const filterStaff = document.getElementById('filterStaff').value;
+
+            let labels = [];
+            let values = [];
+            let chartLabel = 'Registros';
+
+            if (filterInst === 'ALL') {
+                const counts = {};
+                currentFilteredData.forEach(d => {
+                    counts[d.instrument] = (counts[d.instrument] || 0) + 1;
+                });
+                
+                const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+                labels = sorted.slice(0, 6).map(item => item[0]);
+                values = sorted.slice(0, 6).map(item => item[1]);
+                chartLabel = 'Registros por Instrumento';
+            } else if (filterStaff === 'ALL') {
+                const counts = {};
+                currentFilteredData.forEach(d => {
+                    counts[d.staff] = (counts[d.staff] || 0) + 1;
+                });
+
+                const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+                labels = sorted.slice(0, 6).map(item => item[0]);
+                values = sorted.slice(0, 6).map(item => item[1]);
+                chartLabel = 'Registros por Funcionario';
+            } else {
+                let remCount = 0;
+                let normalCount = 0;
+                currentFilteredData.forEach(d => {
+                    if(d.isREM) remCount++;
+                    else normalCount++;
+                });
+                labels = ['No Contabilizados REM', 'Contabilizados / Otros'];
+                values = [remCount, normalCount];
+                chartLabel = 'Desglose del Filtro Actual';
+            }
+
+            if(labels.length === 0) {
+                labels = ['Sin datos'];
+                values = [0];
+            }
+
+            const backgroundColors = [
+                '#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'
+            ];
+
+            myChart = new Chart(ctx, {
+                type: currentChartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: chartLabel,
+                        data: values,
+                        backgroundColor: backgroundColors,
+                        borderWidth: currentChartType === 'bar' ? 0 : 2,
+                        borderRadius: currentChartType === 'bar' ? 6 : 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            display: currentChartType === 'doughnut',
+                            position: 'bottom',
+                            labels: { usePointStyle: true, padding: 15 }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            padding: 12,
+                            cornerRadius: 8
+                        }
+                    },
+                    scales: currentChartType === 'bar' ? {
+                        y: { beginAtZero: true, grid: { display: false } },
+                        x: { grid: { display: false } }
+                    } : {}
+                }
+            });
+        }
+    </script>
+</body>
+</html>
