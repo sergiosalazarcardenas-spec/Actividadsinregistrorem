@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoreo Ejecutivo - Actividades e Inasistentes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        darker: '#0b0f19',
+                        dark: '#111827',
+                        card: '#1f2937',
+                        border: '#374151'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
+        .glass-panel { background: rgba(31, 41, 55, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(55, 65, 81, 0.5); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <header class="glass-panel border-b border-border sticky top-0 z-40 px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-lg">
+        <div class="flex items-center space-x-3 mb-3 md:mb-0">
+            <div class="p-2.5 bg-blue-600/20 border border-blue-500/30 rounded-xl text-blue-400">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide text-white">Monitoreo de Actividades e Inasistentes</h1>
+                <p class="text-xs text-gray-400">Sincronización Automática Dual (Google Drive)</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+            <span id="sync-status" class="text-xs px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+                <span>Conectando con archivos...</span>
+            </span>
+        </div>
+    </header>
+
+    <div class="flex-1 flex flex-col md:flex-row p-6 gap-6 max-w-[1600px] w-full mx-auto">
+        
+        <aside class="w-full md:w-80 flex-shrink-0 space-y-6">
+            <div class="glass-panel rounded-2xl p-5 shadow-xl space-y-5">
+                <div class="flex items-center justify-between border-b border-border pb-3">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-300">Filtros Cruzados</h2>
+                    <button onclick="resetFilters()" class="text-xs text-blue-400 hover:text-blue-300 transition">Limpiar</button>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-gray-400">Sector Territorial</label>
+                    <select id="filter-sector" onchange="applyFilters()" class="w-full bg-darker border border-border rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+                        <option value="">Todos los Sectores</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-gray-400">Estamento / Instrumento</label>
+                    <select id="filter-estamento" onchange="applyFilters()" class="w-full bg-darker border border-border rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+                        <option value="">Todos los Estamentos</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-gray-400">Tipo de Registro</label>
+                    <select id="filter-tipo" onchange="applyFilters()" class="w-full bg-darker border border-border rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+                        <option value="">Todos (Atenciones y NSP)</option>
+                        <option value="ATENCION">Solo Atenciones</option>
+                        <option value="NSP">Solo Inasistencias (NSP)</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-gray-400">Funcionario</label>
+                    <select id="filter-funcionario" onchange="applyFilters()" class="w-full bg-darker border border-border rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+                        <option value="">Todos los Funcionarios</option>
+                    </select>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col space-y-6">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-panel rounded-2xl p-5 shadow-xl border border-border">
+                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Atenciones Totales</p>
+                    <h3 id="kpi-atenciones" class="text-3xl font-bold text-white mt-2">0</h3>
+                </div>
+                <div class="glass-panel rounded-2xl p-5 shadow-xl border border-border">
+                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Inasistencias (NSP)</p>
+                    <h3 id="kpi-nsp" class="text-3xl font-bold text-red-400 mt-2">0</h3>
+                </div>
+                <div class="glass-panel rounded-2xl p-5 shadow-xl border border-border">
+                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Tasa de Ausentismo</p>
+                    <h3 id="kpi-tasa" class="text-3xl font-bold text-amber-400 mt-2">0%</h3>
+                </div>
+                <div class="glass-panel rounded-2xl p-5 shadow-xl border border-border">
+                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Listos para Rescate</p>
+                    <h3 id="kpi-rescate" class="text-3xl font-bold text-blue-400 mt-2">0</h3>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass-panel rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-sm font-semibold text-gray-300 mb-4">Registros por Sector</h3>
+                    <div class="relative h-72">
+                        <canvas id="chartSector"></canvas>
+                    </div>
+                </div>
+                <div class="glass-panel rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-sm font-semibold text-gray-300 mb-4">Distribución por Funcionario</h3>
+                    <div class="relative h-72">
+                        <canvas id="chartFuncionario"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-6 shadow-xl overflow-x-auto">
+                <h3 class="text-sm font-semibold text-gray-300 mb-4">Detalle Combinado de Registros Filtrados</h3>
+                <table class="w-full text-left text-sm text-gray-300">
+                    <thead class="bg-darker text-gray-400 uppercase text-xs border-b border-border">
+                        <tr>
+                            <th class="p-3">RUN</th>
+                            <th class="p-3">Paciente</th>
+                            <th class="p-3">Sector</th>
+                            <th class="p-3">Estamento</th>
+                            <th class="p-3">Estado</th>
+                            <th class="p-3">Funcionario</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-detalle-body" class="divide-y divide-border/50">
+                        </tbody>
+                </table>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        let globalData = [];
+        let chartSectorInstance = null;
+        let chartFuncionarioInstance = null;
+
+        // Enlaces integrados proporcionados
+        const URL_ACTIVIDADES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo7I_9Vnxv3OA6yAWKODmxD0RiruSyDpSdci5BA7Kl-enxn5g1DnGzKN1FOfWRKwr2KkbFrX-cRV-n/pub?output=csv';
+        const URL_INASISTENTES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRUWpiXo7dlyB9Vgw32oc0hp7EgEjtkjN5hntpM0ds6Vx8_7O386vQTswYYtJoiAQ/pub?output=csv';
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await cargarAmbosArchivos();
+        });
+
+        async function cargarAmbosArchivos() {
+            const statusBadge = document.getElementById('sync-status');
+            try {
+                // Descarga simultánea de ambas fuentes de Google Sheets
+                const [respAct, respInas] = await Promise.all([
+                    fetch(URL_ACTIVIDADES),
+                    fetch(URL_INASISTENTES)
+                ]);
+
+                const textAct = await respAct.text();
+                const textInas = await respInas.text();
+
+                let dataset = [];
+
+                // Parseador robusto de CSV respetando posibles comillas
+                const parseCSV = (text) => {
+                    const lines = text.split('\n');
+                    return lines.slice(1).map(line => {
+                        let row = [];
+                        let inQuotes = false;
+                        let current = '';
+                        for (let i = 0; i < line.length; i++) {
+                            let char = line[i];
+                            if (char === '"') {
+                                inQuotes = !inQuotes;
+                            } else if (char === ',' && !inQuotes) {
+                                row.push(current.trim());
+                                current = '';
+                            } else {
+                                current += char;
+                            }
+                        }
+                        row.push(current.trim());
+                        return row;
+                    }).filter(r => r.length > 1 && (r[0] !== '' || r[1] !== ''));
+                };
+
+                const rowsAct = parseCSV(textAct);
+                const rowsInas = parseCSV(textInas);
+
+                // Mapear Actividades (ATENCION)
+                rowsAct.forEach(r => {
+                    dataset.push({
+                        tipo: 'ATENCION',
+                        run: r[1] || r[0] || 'Sin RUN',
+                        paciente: r[2] || 'Sin Nombre',
+                        sector: r[6] || r[3] || 'General',
+                        estamento: r[7] || 'General',
+                        funcionario: r[15] || r[5] || 'No Asignado'
+                    });
+                });
+
+                // Mapear Inasistentes (NSP)
+                rowsInas.forEach(r => {
+                    dataset.push({
+                        tipo: 'NSP',
+                        run: r[1] || r[0] || 'Sin RUN',
+                        paciente: r[2] || 'Sin Nombre',
+                        sector: r[6] || r[3] || 'General',
+                        estamento: r[7] || 'General',
+                        funcionario: r[5] || 'No Asignado'
+                    });
+                });
+
+                globalData = dataset;
+
+                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-emerald-400">Sincronizado (Actividades e Inasistentes)</span>`;
+
+                populateFilters();
+                applyFilters();
+
+            } catch (error) {
+                console.error("Error al sincronizar las fuentes:", error);
+                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-red-400">Error de conexión</span>`;
+            }
+        }
+
+        function populateFilters() {
+            const getUnique = (key) => [...new Set(globalData.map(i => i[key]))].filter(Boolean).sort();
+            
+            ['sector', 'estamento', 'funcionario'].forEach(k => {
+                const sel = document.getElementById('filter-' + k);
+                if (sel) {
+                    const currentVal = sel.value;
+                    sel.innerHTML = `<option value="">Todos los ${k.charAt(0).toUpperCase() + k.slice(1)}s</option>` + 
+                        getUnique(k).map(v => `<option value="${v}">${v}</option>`).join('');
+                    sel.value = currentVal;
+                }
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-sector').value = '';
+            document.getElementById('filter-estamento').value = '';
+            document.getElementById('filter-tipo').value = '';
+            document.getElementById('filter-funcionario').value = '';
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const s = document.getElementById('filter-sector').value;
+            const e = document.getElementById('filter-estamento').value;
+            const t = document.getElementById('filter-tipo').value;
+            const f = document.getElementById('filter-funcionario').value;
+
+            const filtered = globalData.filter(i => 
+                (!s || i.sector === s) && 
+                (!e || i.estamento === e) && 
+                (!t || i.tipo === t) && 
+                (!f || i.funcionario === f)
+            );
+
+            updateUI(filtered);
+        }
+
+        function updateUI(data) {
+            const total = data.length;
+            const nspCount = data.filter(i => i.tipo === 'NSP').length;
+            const atencionCount = data.filter(i => i.tipo === 'ATENCION').length;
+            const tasaAusentismo = (atencionCount + nspCount) > 0 ? ((nspCount / (atencionCount + nspCount)) * 100).toFixed(1) : 0;
+
+            document.getElementById('kpi-atenciones').innerText = atencionCount;
+            document.getElementById('kpi-nsp').innerText = nspCount;
+            document.getElementById('kpi-tasa').innerText = tasaAusentismo + '%';
+            document.getElementById('kpi-rescate').innerText = nspCount;
+
+            const tbody = document.getElementById('table-detalle-body');
+            tbody.innerHTML = data.slice(0, 50).map(row => `
+                <tr class="hover:bg-card/50 transition">
+                    <td class="p-3 font-mono text-xs text-blue-400">${row.run}</td>
+                    <td class="p-3 font-medium text-white">${row.paciente}</td>
+                    <td class="p-3">${row.sector}</td>
+                    <td class="p-3">${row.estamento}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-0.5 rounded-md text-xs font-medium ${row.tipo === 'NSP' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}">
+                            ${row.tipo === 'NSP' ? 'INASISTENCIA (NSP)' : 'ATENCIÓN'}
+                        </span>
+                    </td>
+                    <td class="p-3">${row.funcionario}</td>
+                </tr>
+            `).join('') || `<tr><td colspan="6" class="p-4 text-center text-gray-500">No se encontraron registros con los filtros seleccionados.</td></tr>`;
+
+            updateCharts(data);
+        }
+
+        function updateCharts(data) {
+            const sectorCounts = {};
+            data.forEach(i => { sectorCounts[i.sector] = (sectorCounts[i.sector] || 0) + 1; });
+            
+            const ctxSector = document.getElementById('chartSector').getContext('2d');
+            if (chartSectorInstance) chartSectorInstance.destroy();
+            chartSectorInstance = new Chart(ctxSector, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(sectorCounts),
+                    datasets: [{
+                        label: 'Registros',
+                        data: Object.values(sectorCounts),
+                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            const funcCounts = {};
+            data.forEach(i => { funcCounts[i.funcionario] = (funcCounts[i.funcionario] || 0) + 1; });
+
+            const ctxFunc = document.getElementById('chartFuncionario').getContext('2d');
+            if (chartFuncionarioInstance) chartFuncionarioInstance.destroy();
+            chartFuncionarioInstance = new Chart(ctxFunc, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(funcCounts),
+                    datasets: [{
+                        data: Object.values(funcCounts),
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+    </script>
+</body>
+</html>
