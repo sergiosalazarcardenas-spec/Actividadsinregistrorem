@@ -39,7 +39,7 @@ h1 em { color: var(--teal); font-style: normal; }
 .source-card h2, .filters-card h2, .card-heading h2 { font-size: 1.24rem; margin-bottom: 5px; }
 .source-card p:not(.section-kicker), .source-card__hint { color: var(--muted); font-size: .86rem; line-height: 1.45; margin-bottom: 0; }
 .source-form { display: grid; grid-template-columns: 1fr auto; gap: 13px; align-items: end; }
-.source-action { display: grid; align-content: center; justify-items: start; gap: 9px; }.source-action__note { color: var(--muted); font-size: .78rem; margin: 0; }
+.source-action { display: grid; align-content: center; justify-items: start; gap: 9px; max-width: 760px; }.source-action__note { color: var(--muted); font-size: .78rem; margin: 0; }.source-action__description { color: #52615b; font-size: .84rem; line-height: 1.5; margin: 3px 0 0; }
 .source-card__hint { grid-column: 1 / -1; padding-top: 16px; margin-top: 16px; border-top: 1px solid var(--line); }
 .source-card__hint strong { color: var(--coral); }
 
