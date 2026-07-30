@@ -57,7 +57,7 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 document.addEventListener("DOMContentLoaded", () => {
   $("#loadButton").addEventListener("click", loadGoogleSheet);
-  ["#filterDuplicate", "#filterRem", "#filterStaff"].forEach((selector) => {
+  ["#filterDuplicate", "#filterStaff"].forEach((selector) => {
     $(selector).addEventListener("change", applyFilters);
   });
   $("#filterInstrument").addEventListener("change", onInstrumentChange);
@@ -330,7 +330,6 @@ function setChartBy(value) {
 function applyFilters() {
   const filters = {
     duplicate: $("#filterDuplicate").value,
-    rem: $("#filterRem").value,
     instrument: $("#filterInstrument").value,
     staff: $("#filterStaff").value,
     search: normalizeText($("#filterSearch").value),
@@ -338,8 +337,6 @@ function applyFilters() {
   filteredData = rawData.filter((item) => {
     if (filters.duplicate === "DUPLICATED" && !item.isDuplicate) return false;
     if (filters.duplicate === "DUPLICATED_STRICT_REM" && !item.isStrictNotCountedDup) return false;
-    if (filters.rem === "NOT_COUNTED" && !item.isNotCounted) return false;
-    if (filters.rem === "COUNTED_OR_OTHER" && item.isNotCounted) return false;
     if (filters.instrument !== "ALL" && item.instrument !== filters.instrument) return false;
     if (filters.staff !== "ALL" && item.staff !== filters.staff) return false;
     if (filters.search && !normalizeText(item.id).includes(filters.search)) return false;
@@ -356,7 +353,6 @@ function applyFilters() {
 
 function clearFilters() {
   $("#filterDuplicate").value = "ALL";
-  $("#filterRem").value = "ALL";
   $("#filterInstrument").value = "ALL";
   $("#filterStaff").value = "ALL";
   $("#filterSearch").value = "";
