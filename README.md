@@ -52,6 +52,8 @@ No abra `index.html` con doble clic desde Finder: una dirección local servida p
 
 El cruce de variables y el gráfico responden a los filtros. La tabla conserva el número de fila original para facilitar la auditoría en Google Sheets. La exportación genera un Excel consolidado y una pestaña por funcionario.
 
+Al escoger un **Instrumento**, el gráfico cambia automáticamente a **Funcionarios del instrumento** y el selector siguiente ofrece solo los funcionarios que tienen registros en ese instrumento. Por ejemplo, si escoge `Matrona`, verá el desglose de los funcionarios asociados a `Matrona` y no profesionales de otros instrumentos.
+
 ## 4. Cambiar reglas y nombres de columnas
 
 Toda la configuración que se ajusta con más frecuencia está al inicio de [`app.js`](app.js):

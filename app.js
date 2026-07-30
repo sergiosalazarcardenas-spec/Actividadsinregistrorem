@@ -57,16 +57,16 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 document.addEventListener("DOMContentLoaded", () => {
   $("#loadButton").addEventListener("click", loadGoogleSheet);
-  ["#filterDuplicate", "#filterRem", "#filterInstrument", "#filterStaff"].forEach((selector) => {
+  ["#filterDuplicate", "#filterRem", "#filterStaff"].forEach((selector) => {
     $(selector).addEventListener("change", applyFilters);
   });
+  $("#filterInstrument").addEventListener("change", onInstrumentChange);
   $("#filterSearch").addEventListener("input", debounce(applyFilters, 180));
   $("#clearFilters").addEventListener("click", clearFilters);
   $("#exportButton").addEventListener("click", exportFilteredData);
   $$("[data-chart-by]").forEach((button) => {
     button.addEventListener("click", () => {
-      chartBy = button.dataset.chartBy;
-      $$("[data-chart-by]").forEach((item) => item.classList.toggle("is-active", item === button));
+      setChartBy(button.dataset.chartBy);
       renderChart(filteredData);
     });
   });
@@ -293,7 +293,7 @@ function formatTime(value) {
 
 function updateSelectors() {
   updateSelect("#filterInstrument", rawData.map((item) => item.instrument), "Todos los instrumentos");
-  updateSelect("#filterStaff", rawData.map((item) => item.staff), "Todos los funcionarios");
+  updateStaffForSelectedInstrument();
 }
 
 function updateSelect(selector, values, allLabel) {
@@ -302,6 +302,29 @@ function updateSelect(selector, values, allLabel) {
   const uniqueValues = [...new Set(values)].sort((a, b) => a.localeCompare(b, "es"));
   select.replaceChildren(new Option(allLabel, "ALL"), ...uniqueValues.map((value) => new Option(value, value)));
   select.value = uniqueValues.includes(previous) ? previous : "ALL";
+}
+
+// Cascada Instrumento → Funcionario: evita ofrecer funcionarios sin registros
+// en el instrumento que acaba de escoger el usuario.
+function updateStaffForSelectedInstrument() {
+  const selectedInstrument = $("#filterInstrument").value;
+  const staffPool = selectedInstrument === "ALL"
+    ? rawData
+    : rawData.filter((item) => item.instrument === selectedInstrument);
+  updateSelect("#filterStaff", staffPool.map((item) => item.staff), "Todos los funcionarios");
+}
+
+function onInstrumentChange() {
+  updateStaffForSelectedInstrument();
+  // Un único instrumento ya no se describe mejor con una barra propia: se
+  // despliega automáticamente por los funcionarios que lo componen.
+  setChartBy($("#filterInstrument").value === "ALL" ? "instrument" : "staff");
+  applyFilters();
+}
+
+function setChartBy(value) {
+  chartBy = value;
+  $$("[data-chart-by]").forEach((button) => button.classList.toggle("is-active", button.dataset.chartBy === value));
 }
 
 function applyFilters() {
@@ -337,6 +360,8 @@ function clearFilters() {
   $("#filterInstrument").value = "ALL";
   $("#filterStaff").value = "ALL";
   $("#filterSearch").value = "";
+  updateStaffForSelectedInstrument();
+  setChartBy("instrument");
   applyFilters();
 }
 
@@ -406,8 +431,15 @@ function renderChart(data) {
     return;
   }
   empty.style.display = "none";
+  const selectedInstrument = $("#filterInstrument").value;
   const key = chartBy === "instrument" ? "instrument" : chartBy === "staff" ? "staff" : "remClassification";
-  const title = chartBy === "instrument" ? "Registros por instrumento" : chartBy === "staff" ? "Registros por funcionario" : "Clasificación REM";
+  const title = chartBy === "instrument"
+    ? "Registros por instrumento"
+    : chartBy === "staff" && selectedInstrument !== "ALL"
+      ? `Funcionarios del instrumento: ${selectedInstrument}`
+      : chartBy === "staff"
+        ? "Registros por funcionario"
+        : "Clasificación REM";
   chartTitle.textContent = title;
   const counts = new Map();
   data.forEach((item) => counts.set(item[key], (counts.get(item[key]) || 0) + 1));
