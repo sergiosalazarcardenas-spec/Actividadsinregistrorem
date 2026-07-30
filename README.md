@@ -4,7 +4,7 @@ Este proyecto reemplaza la carga manual de Excel por una lectura en vivo desde u
 
 > Un registro se marca como **actividad no contabilizada en REM** cuando el concepto contiene `actividad no contabilizada en REM` o `actividad no contabilizada en RAM`.
 
-El panel también identifica valores repetidos del ID y considera **“duplicado 100% sin REM”** a un ID repetido cuando *todas* sus filas cumplen la regla anterior.
+El panel identifica valores repetidos del ID y considera **“duplicado 100% sin REM”** cuando se cumple al menos una de estas condiciones: (1) un ID repetido tiene *todas* sus filas sin registro en REM, o (2) para un mismo ID, una misma actividad/procedimiento se repite dos o más veces y todas esas repeticiones no tienen registro en REM. La segunda condición permite detectar una actividad repetida sin REM aunque ese ID también contenga otras actividades registradas.
 
 ## Importante: datos de salud y privacidad
 
@@ -47,7 +47,7 @@ No abra `index.html` con doble clic desde Finder: una dirección local servida p
 | Registros leídos | Filas de la pestaña, excluida la fila de encabezados. |
 | ID únicos | Número de valores diferentes en la variable ID. |
 | Filas con registros múltiples | Registros leídos menos ID únicos: cuenta las repeticiones adicionales de un ID. No equivale necesariamente a un error clínico; depende de que el ID sea único por atención. |
-| Duplicados 100% sin REM | Filas pertenecientes a un ID repetido cuyas repeticiones completas están clasificadas como no contabilizadas en REM. |
+| Duplicados 100% sin REM | Filas de un ID repetido completamente sin REM, más las repeticiones de una misma actividad/procedimiento (dos o más) que estén todas sin registro en REM. |
 | % no contabilizada | En el cruce Instrumento × REM: actividades no contabilizadas dividido por el total filtrado de ese instrumento. |
 
 El cruce de variables y el gráfico responden a los filtros. La tabla conserva el número de fila original para facilitar la auditoría en Google Sheets. La exportación genera un Excel consolidado y una pestaña por funcionario.
@@ -114,5 +114,5 @@ Para una planilla privada, el siguiente incremento técnico debe ser una impleme
 1. Pegue un enlace de una pestaña con datos de prueba anonimizados.
 2. Compare el total de filas con `COUNTA`/conteo de Google Sheets.
 3. Filtre “Actividad no contabilizada” y confirme una muestra manual contra el texto de `Concepto`.
-4. Revise una fila “Duplicado 100% sin REM”: todas las filas con ese mismo ID deben estar clasificadas como no contabilizadas.
+4. Revise una fila “Repetición 100% sin REM”: debe corresponder a un ID completo sin REM o a una misma actividad/procedimiento repetida dos o más veces, cuyas repeticiones estén todas sin REM.
 5. Exporte el resultado y confirme que el consolidado y las pestañas por funcionario contienen los filtros aplicados.
