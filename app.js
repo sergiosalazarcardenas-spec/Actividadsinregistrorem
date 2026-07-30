@@ -363,12 +363,14 @@ function clearFilters() {
 
 function updateKPIs() {
   const ids = new Set(rawData.filter((item) => item.id).map((item) => item.id));
-  const duplicates = rawData.filter((item) => item.isDuplicate).length;
+  // Repeticiones adicionales: cada ID aporta una primera fila única y las
+  // siguientes se contabilizan como registros múltiples.
+  const multipleRecordRows = Math.max(rawData.length - ids.size, 0);
   const strict = rawData.filter((item) => item.isStrictNotCountedDup).length;
   $("#metricTotalRows").textContent = rawData.length.toLocaleString("es-CL");
   $("#metricTotalRowsNote").textContent = "Filas de datos válidas";
   $("#metricUnique").textContent = ids.size.toLocaleString("es-CL");
-  $("#metricDuplicates").textContent = duplicates.toLocaleString("es-CL");
+  $("#metricDuplicates").textContent = multipleRecordRows.toLocaleString("es-CL");
   $("#metricStrictRem").textContent = strict.toLocaleString("es-CL");
 }
 

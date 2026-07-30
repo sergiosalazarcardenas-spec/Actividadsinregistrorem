@@ -25,7 +25,6 @@
         <div class="hero__content">
           <div>
             <h1>Control de registros <em>REM</em></h1>
-            <p>Consulta una pestaña de Google Sheets, identifica actividades no contabilizadas en REM y explora sus cruces por instrumento y funcionario.</p>
           </div>
           <div class="hero__meta" aria-label="Estado de la fuente de datos">
             <span class="status-dot" id="sourceDot"></span>
@@ -34,12 +33,7 @@
         </div>
       </header>
 
-      <section class="source-card" aria-labelledby="source-title">
-        <div class="source-card__heading">
-          <p class="section-kicker">Fuente de datos</p>
-          <h2 id="source-title">Fuente configurada</h2>
-          <p>La primera fila de la hoja debe contener los encabezados. El enlace no se muestra en el panel.</p>
-        </div>
+      <section class="source-card" aria-label="Actualizar datos">
         <div class="source-action">
           <button id="loadButton" class="button button--primary" type="button">
             <span class="button__label">Actualizar datos</span>
@@ -47,7 +41,6 @@
           </button>
           <p class="source-action__note">Los usuarios solo necesitan pulsar este botón.</p>
         </div>
-        <p class="source-card__hint">La URL vive en <code>config.local.js</code>, archivo excluido de Git. Ocultarla en pantalla no la vuelve privada: use solo datos agregados o anonimizados; vea la alternativa privada en el README.</p>
       </section>
 
       <section class="metrics" aria-label="Indicadores principales">
@@ -58,7 +51,7 @@
           <p>ID únicos</p><strong id="metricUnique">—</strong><span>Columna identificadora</span>
         </article>
         <article class="metric-card metric-card--coral">
-          <p>Filas duplicadas</p><strong id="metricDuplicates">—</strong><span>IDs con más de una atención</span>
+          <p>Filas con registros múltiples</p><strong id="metricDuplicates">—</strong><span>Registros leídos − ID únicos</span>
         </article>
         <article class="metric-card metric-card--gold">
           <p>Duplicados 100% sin REM</p><strong id="metricStrictRem">—</strong><span>Todos sus registros no contabilizados</span>
@@ -79,7 +72,7 @@
               <span>Estado del ID</span>
               <select id="filterDuplicate">
                 <option value="ALL">Todos los registros</option>
-                <option value="DUPLICATED">Solo filas duplicadas</option>
+                <option value="DUPLICATED">Solo registros múltiples</option>
                 <option value="DUPLICATED_STRICT_REM">Duplicados 100% sin REM</option>
               </select>
             </label>

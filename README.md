@@ -46,7 +46,7 @@ No abra `index.html` con doble clic desde Finder: una dirección local servida p
 |---|---|
 | Registros leídos | Filas de la pestaña, excluida la fila de encabezados. |
 | ID únicos | Número de valores diferentes en la variable ID. |
-| Filas duplicadas | Filas cuyo ID aparece más de una vez. No equivale necesariamente a un error clínico: depende de que el ID sea realmente único por atención. |
+| Filas con registros múltiples | Registros leídos menos ID únicos: cuenta las repeticiones adicionales de un ID. No equivale necesariamente a un error clínico; depende de que el ID sea único por atención. |
 | Duplicados 100% sin REM | Filas pertenecientes a un ID repetido cuyas repeticiones completas están clasificadas como no contabilizadas en REM. |
 | % no contabilizada | En el cruce Instrumento × REM: actividades no contabilizadas dividido por el total filtrado de ese instrumento. |
 
