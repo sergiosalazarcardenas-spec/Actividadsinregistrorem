@@ -31,6 +31,11 @@ const CONFIG = {
       aliases: ["instrumento", "tipo instrumento", "nombre instrumento"],
       fallbackColumn: "Q",
     },
+    activity: {
+      label: "Actividad o procedimiento",
+      aliases: ["actividad y o procedimiento", "actividad y/o procedimiento", "actividad", "procedimiento", "prestacion", "prestación"],
+      fallbackColumn: "R",
+    },
     rem: {
       label: "Concepto / detalle REM",
       aliases: ["concepto", "detalle rem", "estado rem", "rem", "descripcion rem", "descripción rem"],
@@ -197,22 +202,45 @@ function hydrateData(rows) {
   if (missing.length) throw new Error(`No se detectaron las columnas obligatorias: ${missing.join(", ")}.`);
 
   const idStats = new Map();
+  const activityStatsById = new Map();
   originalRows.forEach((row) => {
     const id = getCell(row, "id").trim();
     const remText = getCell(row, "rem");
     if (!id) return;
+
     const item = idStats.get(id) || { total: 0, notCounted: 0 };
     item.total += 1;
     if (isNotCountedRem(remText)) item.notCounted += 1;
     idStats.set(id, item);
+
+    // Una misma atención puede tener actividades diferentes. Para detectar una
+    // repetición real, se agrupa además por la actividad/procedimiento y no
+    // solo por el ID. Si no existe esa columna se usa el detalle REM como
+    // respaldo para no interrumpir el análisis.
+    const activityKey = getActivityKey(row, remText);
+    const activitiesForId = activityStatsById.get(id) || new Map();
+    const activityItem = activitiesForId.get(activityKey) || { total: 0, notCounted: 0 };
+    activityItem.total += 1;
+    if (isNotCountedRem(remText)) activityItem.notCounted += 1;
+    activitiesForId.set(activityKey, activityItem);
+    activityStatsById.set(id, activitiesForId);
   });
 
   rawData = originalRows.map((row, index) => {
     const id = getCell(row, "id").trim();
     const remDetail = getCell(row, "rem").trim();
     const group = idStats.get(id);
+    const activity = getCell(row, "activity").trim();
+    const activityGroup = activityStatsById.get(id)?.get(getActivityKey(row, remDetail));
     const isDuplicate = Boolean(id && group?.total > 1);
-    const isStrictNotCountedDup = Boolean(isDuplicate && group.total === group.notCounted);
+    const isAllNotCountedId = Boolean(isDuplicate && group.total === group.notCounted);
+    const isRepeatedUnregisteredActivity = Boolean(
+      id && activityGroup?.total > 1 && activityGroup.total === activityGroup.notCounted,
+    );
+    // Mantiene el criterio histórico (ID completo sin REM) y suma los casos
+    // donde solo una actividad se repite dos o más veces sin REM, aunque ese
+    // mismo ID incluya otras actividades registradas en REM.
+    const isStrictNotCountedDup = isAllNotCountedId || isRepeatedUnregisteredActivity;
     const notCounted = isNotCountedRem(remDetail);
 
     return {
@@ -222,9 +250,11 @@ function hydrateData(rows) {
       time: formatTime(getCell(row, "time")),
       instrument: getCell(row, "instrument").trim() || "No especificado",
       staff: getCell(row, "staff").trim() || "No especificado",
+      activity: activity || remDetail,
       remDetail,
       isDuplicate,
       isStrictNotCountedDup,
+      isRepeatedUnregisteredActivity,
       isNotCounted: notCounted,
       remClassification: notCounted ? "No contabilizada REM" : "Contabilizada / otro concepto",
     };
@@ -257,6 +287,11 @@ function detectColumns(headers) {
 function getCell(row, key) {
   const index = detectedColumns[key];
   return index >= 0 && row[index] !== undefined && row[index] !== null ? String(row[index]) : "";
+}
+
+function getActivityKey(row, remText) {
+  const activity = getCell(row, "activity").trim();
+  return normalizeText(activity) || normalizeText(remText);
 }
 
 function isNotCountedRem(value) {
@@ -386,7 +421,7 @@ function renderTable(data) {
   }
   body.innerHTML = data.slice(0, CONFIG.previewLimit).map((item) => {
     const duplicatePill = item.isStrictNotCountedDup
-      ? '<span class="pill pill--strict">Dupl. 100% sin REM</span>'
+      ? '<span class="pill pill--strict">Repetición 100% sin REM</span>'
       : item.isDuplicate
         ? '<span class="pill pill--duplicate">Duplicado</span>'
         : '<span class="pill pill--unique">Único</span>';
@@ -482,7 +517,7 @@ function exportFilteredData() {
   const toExport = (item) => [
     ...originalRows[item.originalRowIndex],
     item.remClassification,
-    item.isStrictNotCountedDup ? "Duplicado 100% sin REM" : item.isDuplicate ? "Duplicado" : "Único",
+    item.isStrictNotCountedDup ? "Repetición 100% sin REM" : item.isDuplicate ? "Duplicado" : "Único",
   ];
   const workbook = XLSX.utils.book_new();
   const headers = [...originalHeaders, ...addedHeaders];
