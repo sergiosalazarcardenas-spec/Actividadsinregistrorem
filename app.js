@@ -442,14 +442,14 @@ function renderChart(data) {
   const counts = new Map();
   data.forEach((item) => counts.set(item[key], (counts.get(item[key]) || 0) + 1));
   const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, CONFIG.chartLimit);
-  const palette = ["#137c71", "#257fae", "#cf7b2e", "#b45b82", "#768a36", "#7661b5", "#cf5950", "#457c77"];
+  const palette = ["#087d78", "#3976a8", "#d8783c", "#795fc2", "#7c9a3d", "#c75e77", "#19758d", "#b98527"];
   mainChart = new Chart($("#mainChart"), {
     type: "bar",
     data: { labels: sorted.map(([label]) => label), datasets: [{ data: sorted.map(([, value]) => value), backgroundColor: palette, borderRadius: 7, borderSkipped: false }] },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { backgroundColor: "#152620", padding: 11, displayColors: false } },
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: "#0c2c3a", padding: 11, displayColors: false } },
       scales: { x: { grid: { display: false }, ticks: { color: "#64736d", maxRotation: 0, autoSkip: false, callback: function (_, index) { const label = this.getLabelForValue(index); return label.length > 18 ? `${label.slice(0, 18)}…` : label; } } }, y: { beginAtZero: true, ticks: { precision: 0, color: "#64736d" }, grid: { color: "#e6ede8" } } },
     },
   });

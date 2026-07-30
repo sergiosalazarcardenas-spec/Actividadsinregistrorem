@@ -41,22 +41,37 @@
           </button>
           <p class="source-action__note">Los usuarios solo necesitan pulsar este botón.</p>
           <p class="source-action__description">Con esta herramienta se visualiza el total de acciones y se identifican aquellas cuyas actividades presentan un 100% de no registro en REM; es decir, no se reflejan en las estadísticas institucionales.</p>
+          <div class="analysis-strip" aria-label="Componentes del análisis">
+            <span><b>01</b>Total de acciones</span>
+            <span><b>02</b>Registros múltiples</span>
+            <span><b>03</b>Brechas de registro REM</span>
+          </div>
         </div>
       </section>
 
-      <section class="metrics" aria-label="Indicadores principales">
-        <article class="metric-card metric-card--ink">
-          <p>Registros leídos</p><strong id="metricTotalRows">—</strong><span id="metricTotalRowsNote">A la espera de datos</span>
-        </article>
-        <article class="metric-card metric-card--teal">
-          <p>ID únicos</p><strong id="metricUnique">—</strong><span>Columna identificadora</span>
-        </article>
-        <article class="metric-card metric-card--coral">
-          <p>Filas con registros múltiples</p><strong id="metricDuplicates">—</strong><span>Registros leídos − ID únicos</span>
-        </article>
-        <article class="metric-card metric-card--gold">
-          <p>Duplicados 100% sin REM</p><strong id="metricStrictRem">—</strong><span>Todos sus registros no contabilizados</span>
-        </article>
+      <section class="metrics-section" aria-label="Indicadores principales">
+        <div class="metrics-section__heading">
+          <p class="section-kicker">Resumen ejecutivo</p>
+          <span>Lectura consolidada de la fuente actual</span>
+        </div>
+        <div class="metrics">
+          <article class="metric-card metric-card--ink">
+            <span class="metric-card__index">01</span>
+            <p>Registros leídos</p><strong id="metricTotalRows">—</strong><span id="metricTotalRowsNote">A la espera de datos</span>
+          </article>
+          <article class="metric-card metric-card--teal">
+            <span class="metric-card__index">02</span>
+            <p>ID únicos</p><strong id="metricUnique">—</strong><span>Columna identificadora</span>
+          </article>
+          <article class="metric-card metric-card--coral">
+            <span class="metric-card__index">03</span>
+            <p>Filas con registros múltiples</p><strong id="metricDuplicates">—</strong><span>Registros leídos − ID únicos</span>
+          </article>
+          <article class="metric-card metric-card--gold">
+            <span class="metric-card__index">04</span>
+            <p>Duplicados 100% sin REM</p><strong id="metricStrictRem">—</strong><span>Todos sus registros no contabilizados</span>
+          </article>
+        </div>
       </section>
 
       <section class="workspace" aria-label="Herramientas de análisis">
